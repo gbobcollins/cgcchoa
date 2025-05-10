@@ -1,2 +1,3 @@
 .DS*
 .openapikey
+node_modules
