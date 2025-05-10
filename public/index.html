@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Champions Gate Country Club HOA Assistant</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <style>
+        .chat-container {
+            height: calc(100vh - 16rem);
+        }
+        .message-container {
+            overflow-y: auto;
+            max-height: calc(100vh - 20rem);
+        }
+        .user-message {
+            background-color: #e9f5ff;
+            border-radius: 18px 18px 0 18px;
+        }
+        .ai-message {
+            background-color: #f0f0f0;
+            border-radius: 18px 18px 18px 0;
+        }
+        .typing-indicator span {
+            animation: blink 1.4s infinite both;
+        }
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        @keyframes blink {
+            0% { opacity: 0.1; }
+            20% { opacity: 1; }
+            100% { opacity: 0.1; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="flex flex-col items-center justify-center mb-6">
+            <div class="flex items-center">
+                <img src="/api/placeholder/90/90" alt="Champions Gate Logo" class="w-14 h-14 mr-4">
+                <h1 class="text-3xl font-bold text-blue-900">Champions Gate Country Club</h1>
+            </div>
+            <h2 class="text-xl text-gray-600 mt-2">HOA Document Assistant</h2>
+        </header>
+
+        <!-- Chat Interface -->
+        <div class="bg-white rounded-lg shadow-lg p-4 chat-container flex flex-col">
+            <!-- Welcome Message -->
+            <div class="bg-blue-50 rounded-lg p-4 mb-4 border-l-4 border-blue-500">
+                <h3 class="font-bold text-blue-800">Welcome to the Champions Gate HOA Assistant</h3>
+                <p class="text-gray-700">I can help you with questions about our HOA documents and Florida Statute 720. Ask me anything about our community guidelines, rules, or regulations.</p>
+            </div>
+
+            <!-- Messages Area -->
+            <div id="message-container" class="message-container flex-grow mb-4 space-y-3">
+                <div class="ai-message p-3 max-w-3xl">
+                    <p>Hello! I'm your Champions Gate HOA assistant. How can I help you today?</p>
+                </div>
+                <!-- Messages will be added here via JavaScript -->
+            </div>
+
+            <!-- Typing Indicator (hidden by default) -->
+            <div id="typing-indicator" class="ai-message p-3 max-w-xs typing-indicator hidden">
+                <p>Thinking<span>.</span><span>.</span><span>.</span></p>
+            </div>
+
+            <!-- Input Area -->
+            <div class="mt-auto">
+                <form id="chat-form" class="flex gap-2">
+                    <textarea 
+                        id="user-input" 
+                        class="flex-grow border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                        placeholder="Type your question here..."
+                        rows="2"
+                    ></textarea>
+                    <button 
+                        type="submit" 
+                        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        Send
+                    </button>
+                </form>
+                <div class="text-xs text-gray-500 mt-2">
+                    <p>This assistant provides information based on Champions Gate HOA documents and Florida Statute 720. For official decisions, please consult the HOA board.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('chat-form');
+            const userInput = document.getElementById('user-input');
+            const messageContainer = document.getElementById('message-container');
+            const typingIndicator = document.getElementById('typing-indicator');
+
+            // Auto-resize textarea as user types
+            userInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+                // Limit to 5 rows
+                if (this.scrollHeight > 5 * 24) {
+                    this.style.overflowY = 'auto';
+                } else {
+                    this.style.overflowY = 'hidden';
+                }
+            });
+
+            // Handle form submission
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const message = userInput.value.trim();
+                if (!message) return;
+
+                // Add user message to chat
+                addMessage(message, 'user');
+                
+                // Clear input
+                userInput.value = '';
+                userInput.style.height = 'auto';
+                
+                // Show typing indicator
+                typingIndicator.classList.remove('hidden');
+                
+                try {
+                    // Replace with your actual API endpoint on Render
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ message }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to get response');
+                    }
+
+                    const data = await response.json();
+                    
+                    // Hide typing indicator
+                    typingIndicator.classList.add('hidden');
+                    
+                    // Add AI response to chat
+                    addMessage(data.response, 'ai');
+                } catch (error) {
+                    console.error('Error:', error);
+                    
+                    // Hide typing indicator
+                    typingIndicator.classList.add('hidden');
+                    
+                    // Add error message
+                    addMessage('Sorry, I encountered an error. Please try again.', 'ai');
+                }
+                
+                // Scroll to bottom
+                messageContainer.scrollTop = messageContainer.scrollHeight;
+            });
+
+            // Function to add a message to the chat
+            function addMessage(message, sender) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = sender === 'user' ? 'user-message p-3 ml-auto max-w-3xl' : 'ai-message p-3 max-w-3xl';
+                
+                // Replace newlines with <br> tags
+                const formattedMessage = message.replace(/\n/g, '<br>');
+                
+                messageDiv.innerHTML = `<p>${formattedMessage}</p>`;
+                messageContainer.appendChild(messageDiv);
+                
+                // Scroll to bottom
+                messageContainer.scrollTop = messageContainer.scrollHeight;
+            }
+        });
+    </script>
+</body>
+</html>
