@@ -55,10 +55,10 @@ app.post('/api/chat', async (req, res) => {
     const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',  // Replace with 'gpt-4o-mini' if needed
       messages: messages,
-    //   tools: [{
-    //     type: "file_search",
-    //     vector_store_ids: ["notyetcreated"],
-    // }],
+      tools: [{
+        type: "file_search",
+        vector_store_ids: [process.env.VECTOR_STORE_ID]
+    }],
       max_tokens: 1000,
       temperature: 0.7,
     });
