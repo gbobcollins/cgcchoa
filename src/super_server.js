@@ -117,6 +117,100 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
+// Setup route: One-time assistant creation (if needed)
+app.post('/api/setup', async (req, res) => {
+  try {
+    // Only allow this route with admin authentication in production
+    const adminKey = req.headers['x-admin-key'];
+    if (!adminKey || adminKey !== process.env.ADMIN_KEY) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    // Create an assistant with document retrieval capabilities
+    const assistant = await openai.beta.assistants.create({
+      name: "Champions Gate HOA Assistant",
+      description: "Assistant for Champions Gate Country Club HOA documents and Florida Statute 720",
+      model: "gpt-4-turbo",
+      tools: [
+        { type: "retrieval" }, // Enables document search
+        { 
+          type: "function",
+          function: {
+            name: "search_documents",
+            description: "Search for specific information in HOA documents",
+            parameters: {
+              type: "object",
+              properties: {
+                query: {
+                  type: "string",
+                  description: "The search query to find information in HOA documents"
+                }
+              },
+              required: ["query"]
+            }
+          }
+        }
+      ],
+      instructions: `You are the AI assistant for Champions Gate Country Club HOA.
+                    Your purpose is to help residents understand HOA documents and Florida Statute 720.
+                    Use the retrieval tool to search for relevant information in the documents.
+                    Be concise, helpful, and specific. When answering questions, cite specific sections
+                    from the HOA documents or Florida Statute 720 when applicable.`
+    });
+    
+    res.json({ 
+      success: true, 
+      assistant_id: assistant.id,
+      message: "Assistant created successfully. Save this ID in your .env file as OPENAI_ASSISTANT_ID."
+    });
+  } catch (error) {
+    console.error('Error creating assistant:', error);
+    res.status(500).json({ error: 'Failed to create assistant' });
+  }
+});
+
+// File upload endpoint for adding documents to the assistant
+app.post('/api/upload', async (req, res) => {
+  try {
+    // Only allow this route with admin authentication in production
+    const adminKey = req.headers['x-admin-key'];
+    if (!adminKey || adminKey !== process.env.ADMIN_KEY) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    // This would need a file upload middleware like multer in a real app
+    // For this example, we'll assume files are already in a 'documents' folder
+    
+    // Example of uploading a file and attaching to the assistant:
+    const filePath = path.join(__dirname, 'documents', 'sample_hoa_doc.pdf');
+    
+    if (fs.existsSync(filePath)) {
+      // Upload the file to OpenAI
+      const file = await openai.files.create({
+        file: fs.createReadStream(filePath),
+        purpose: "assistants"
+      });
+      
+      // Attach the file to the assistant
+      await openai.beta.assistants.files.create(
+        ASSISTANT_ID,
+        { file_id: file.id }
+      );
+      
+      res.json({ 
+        success: true, 
+        file_id: file.id,
+        message: "File uploaded and attached to assistant successfully."
+      });
+    } else {
+      res.status(404).json({ error: 'File not found' });
+    }
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    res.status(500).json({ error: 'Failed to upload file' });
+  }
+});
+
 // Serve the main HTML file for all other routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
