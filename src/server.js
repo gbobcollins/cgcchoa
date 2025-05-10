@@ -2,7 +2,7 @@
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
-const { Anthropic } = require('@anthropic-ai/sdk');
+const OpenAI = require('openai');
 const fs = require('fs');
 require('dotenv').config();
 
@@ -14,9 +14,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Initialize Anthropic client
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 // Store conversation history (in a real app, use a database)
@@ -39,7 +39,7 @@ app.post('/api/chat', async (req, res) => {
     // Get conversation history
     const history = getConversationHistory(userId);
     
-    // Prepare messages array for Claude
+    // Prepare messages array for OpenAI
     const messages = [
       {
         role: 'system',
@@ -51,14 +51,15 @@ app.post('/api/chat', async (req, res) => {
       { role: 'user', content: message }
     ];
     
-    // Call Claude API
-    const response = await anthropic.messages.create({
-      model: 'claude-3-opus-20240229',
-      max_tokens: 1000,
+    // Call OpenAI API
+    const response = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',  // Replace with 'gpt-4-turbo' if needed
       messages: messages,
+      max_tokens: 1000,
+      temperature: 0.7,
     });
     
-    const aiResponse = response.content[0].text;
+    const aiResponse = response.choices[0].message.content;
     
     // Update conversation history
     history.push({ role: 'user', content: message });
@@ -71,7 +72,7 @@ app.post('/api/chat', async (req, res) => {
     
     res.json({ response: aiResponse });
   } catch (error) {
-    console.error('Error calling Claude API:', error);
+    console.error('Error calling OpenAI API:', error);
     res.status(500).json({ error: 'Failed to get response from AI' });
   }
 });
